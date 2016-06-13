@@ -33,12 +33,12 @@ func main() {
 	http.HandleFunc("/", handleIndex)
 	http.HandleFunc("/steam/discounts", handleSteamDiscounts)
 
-	hostport := fmt.Sprintf("%s:%s", os.Getenv("IP"), os.Getenv("PORT"))
-
 	// Init database.
 	db = getDB()
 	defer db.Close()
 
+	hostport := fmt.Sprintf(":%s", os.Getenv("PORT"))
+	log.Printf("Server running on %s\n", hostport)
 	log.Fatal(http.ListenAndServe(hostport, nil))
 }
 
