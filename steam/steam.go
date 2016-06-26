@@ -12,6 +12,7 @@ const featuredTableName = "steam_featured_game"
 
 var (
 	queryAllDiscounts string
+	queryAllFeatured string
 )
 
 // Prepare queries.
@@ -21,7 +22,10 @@ func init() {
 		"discount"}
 	queryAllDiscounts = fmt.Sprintf(
 		"SELECT %s FROM %s", strings.Join(fields, ", "), discountTableName)
-	fields_featured := append(fields, "feature_type")
+	
+	fields_featured := []string{
+		"name", "link", "img_src", "headline", "price_before", "price_now",
+		"discount"}
 	queryAllFeatured = fmt.Sprintf(
 		"SELECT %s FROM %s", strings.Join(fields_featured, ","), featuredTableName)
 }
@@ -35,17 +39,17 @@ type SteamGame struct {
 	PriceBefore float32 `json:"priceBefore"`
 	PriceNow    float32 `json:"priceNow"`
 	Discount    string  `json:"discount"`
-	FeatureType string  `json:"featureType"`
 }
 
 // Get all discounts in current discount table.
 func GetDiscounts(db *sql.DB) ([]SteamGame, error) {
 	rows, err := db.Query(queryAllDiscounts)
-	defer rows.Close()
 
 	if err != nil {
 		return nil, err
 	}
+	
+	defer rows.Close()
 
 	res := make([]SteamGame, 0)
 	for rows.Next() {
@@ -64,13 +68,19 @@ func GetDiscounts(db *sql.DB) ([]SteamGame, error) {
 }
 
 // Get all featured games in current featured table.
-func GetFeatured(db *sql.DB) ([]SteamGame, error) {
+func GetFeatured(db *sql.DB, feature string) ([]SteamGame, error) {
+	if !IsValidFeature(feature) {
+		feature = "win"
+	}
+	queryAllFeatured = fmt.Sprintf(
+		"%s where feature_type=featured_%s", queryAllFeatured, feature)
 	rows, err := db.Query(queryAllFeatured)
-	defer rows.Close()
 	
 	if err != nil {
 		return nil, err
 	}
+	
+	defer rows.Close()
 	
 	res := make([]SteamGame, 0)
 	for rows.Next() {
@@ -78,11 +88,22 @@ func GetFeatured(db *sql.DB) ([]SteamGame, error) {
 		
 		err = rows.Scan(
 			&game.Name, &game.URL, &game.ImgSrc, &game.Review, &game.PriceBefore,
-			&game.PriceNow, &game.Discount, &game.featureType)
+			&game.PriceNow, &game.Discount)
 		if err != nil {
 			return nil, err
 		}
 		res = append(res, game)
 	}
 	return res, nil
+}
+
+func IsValidFeature(feature string) bool {
+    switch feature {
+    case
+        "win",
+        "linux",
+        "mac":
+        return true
+    }
+    return false
 }
