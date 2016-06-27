@@ -31,11 +31,11 @@ func getDB() (db *sql.DB) {
 }
 
 func main() {
-    mux := routes.New()
-	mux.Get("/steam/discounts", handleSteamDiscounts)
-	mux.Get("/steam/featured/{feature:[a-z]+}", handleSteamFeatured)
+    mux := mux.NewRouter()
+	mux.HandleFunc("/steam/discounts", handleSteamDiscounts)
+	mux.HandleFunc("/steam/featured/{feature:[a-z]+}", handleSteamFeatured)
 
-	mux.Get("/", handleIndex)
+	mux.HandleFunc("/", handleIndex)
 
 	// Init database.
 	db = getDB()
