@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/this-is-a-bot/bot/steam"
+    "github.com/gorilla/mux"
 	"log"
 	"net/http"
 	"os"
