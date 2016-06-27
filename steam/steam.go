@@ -72,9 +72,9 @@ func GetFeatured(db *sql.DB, feature string) ([]SteamGame, error) {
 	if !IsValidFeature(feature) {
 		feature = "win"
 	}
-	queryAllFeatured = fmt.Sprintf(
+    queryOneFeature := fmt.Sprintf(
 		"%s where feature_type='featured_%s'", queryAllFeatured, feature)
-	rows, err := db.Query(queryAllFeatured)
+	rows, err := db.Query(queryOneFeature)
 	
 	if err != nil {
 		return nil, err
