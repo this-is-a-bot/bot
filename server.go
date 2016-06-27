@@ -31,9 +31,11 @@ func getDB() (db *sql.DB) {
 }
 
 func main() {
-	http.HandleFunc("/", handleIndex)
-	http.HandleFunc("/steam/discounts", handleSteamDiscounts)
-	http.HandleFunc("/steam/featured/{feature:[a-z]+}", handleSteamFeatured)
+    mux := routes.New()
+	mux.Get("/steam/discounts", handleSteamDiscounts)
+	mux.Get("/steam/featured/{feature:[a-z]+}", handleSteamFeatured)
+
+	mux.Get("/", handleIndex)
 
 	// Init database.
 	db = getDB()
