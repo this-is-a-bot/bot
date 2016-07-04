@@ -12,7 +12,7 @@ const featuredTableName = "steam_featured_game"
 
 var (
 	queryAllDiscounts string
-	queryAllFeatured string
+	queryAllFeatured  string
 )
 
 // Prepare queries.
@@ -22,7 +22,7 @@ func init() {
 		"discount"}
 	queryAllDiscounts = fmt.Sprintf(
 		"SELECT %s FROM %s", strings.Join(fields, ", "), discountTableName)
-	
+
 	fields_featured := []string{
 		"name", "link", "img_src", "headline", "price_before", "price_now",
 		"discount"}
@@ -48,7 +48,7 @@ func GetDiscounts(db *sql.DB) ([]SteamGame, error) {
 	if err != nil {
 		return nil, err
 	}
-	
+
 	defer rows.Close()
 
 	res := make([]SteamGame, 0)
@@ -72,20 +72,20 @@ func GetFeatured(db *sql.DB, feature string) ([]SteamGame, error) {
 	if !IsValidFeature(feature) {
 		feature = "win"
 	}
-    queryOneFeature := fmt.Sprintf(
+	queryOneFeature := fmt.Sprintf(
 		"%s where feature_type='featured_%s'", queryAllFeatured, feature)
 	rows, err := db.Query(queryOneFeature)
-	
+
 	if err != nil {
 		return nil, err
 	}
-	
+
 	defer rows.Close()
-	
+
 	res := make([]SteamGame, 0)
 	for rows.Next() {
 		var game SteamGame
-		
+
 		err = rows.Scan(
 			&game.Name, &game.URL, &game.ImgSrc, &game.Review, &game.PriceBefore,
 			&game.PriceNow, &game.Discount)
@@ -98,12 +98,12 @@ func GetFeatured(db *sql.DB, feature string) ([]SteamGame, error) {
 }
 
 func IsValidFeature(feature string) bool {
-    switch feature {
-    case
-        "win",
-        "linux",
-        "mac":
-        return true
-    }
-    return false
+	switch feature {
+	case
+		"win",
+		"linux",
+		"mac":
+		return true
+	}
+	return false
 }
