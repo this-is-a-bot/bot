@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"github.com/gorilla/mux"
 	"github.com/this-is-a-bot/bot/steam"
 	"log"
 	"net/http"
@@ -31,12 +30,9 @@ func getDB() (db *sql.DB) {
 }
 
 func main() {
-	mux := mux.NewRouter()
-	mux.HandleFunc("/", handleIndex)
-	mux.HandleFunc("/steam/discounts", handleSteamDiscounts)
-	mux.HandleFunc("/steam/featured/{feature:[a-z]+}", handleSteamFeatured)
-
-	http.Handle("/", mux)
+	http.HandleFunc("/", handleIndex)
+	http.HandleFunc("/steam/discounts", handleSteamDiscounts)
+	http.HandleFunc("/steam/featured", handleSteamFeatured)
 
 	// Init database.
 	db = getDB()
@@ -72,8 +68,7 @@ func handleSteamDiscounts(w http.ResponseWriter, r *http.Request) {
 
 // Return a list of featured steam games in JSON format
 func handleSteamFeatured(w http.ResponseWriter, r *http.Request) {
-	params := mux.Vars(r)
-	feature := params["feature"]
+	feature := r.Form["feature"]
 	games, err := steam.GetFeatured(db, feature)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
