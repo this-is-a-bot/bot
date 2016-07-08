@@ -23,11 +23,11 @@ func init() {
 	queryAllDiscounts = fmt.Sprintf(
 		"SELECT %s FROM %s", strings.Join(fields, ", "), discountTableName)
 
-	fields_featured := []string{
+	fieldsFeatured := []string{
 		"name", "link", "img_src", "headline", "price_before", "price_now",
 		"discount"}
 	queryAllFeatured = fmt.Sprintf(
-		"SELECT %s FROM %s", strings.Join(fields_featured, ","), featuredTableName)
+		"SELECT %s FROM %s", strings.Join(fieldsFeatured, ","), featuredTableName)
 }
 
 // Corresponds to rows in `steam_discount_game` table.
@@ -73,7 +73,7 @@ func GetFeatured(db *sql.DB, feature string) ([]SteamGame, error) {
 		feature = "win"
 	}
 	queryOneFeature := fmt.Sprintf(
-		"%s where feature_type='featured_%s'", queryAllFeatured, feature)
+		"%s WHERE feature_type='featured_%s'", queryAllFeatured, feature)
 	rows, err := db.Query(queryOneFeature)
 
 	if err != nil {

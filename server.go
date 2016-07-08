@@ -68,7 +68,7 @@ func handleSteamDiscounts(w http.ResponseWriter, r *http.Request) {
 
 // Return a list of featured steam games in JSON format
 func handleSteamFeatured(w http.ResponseWriter, r *http.Request) {
-	feature := r.Form["feature"][0]
+	feature := r.FormValue("feature")
 	games, err := steam.GetFeatured(db, feature)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
