@@ -32,6 +32,7 @@ func getDB() (db *sql.DB) {
 func main() {
 	http.HandleFunc("/", handleIndex)
 	http.HandleFunc("/steam/discounts", handleSteamDiscounts)
+	http.HandleFunc("/steam/featured", handleSteamFeatured)
 
 	// Init database.
 	db = getDB()
@@ -50,6 +51,25 @@ func handleIndex(w http.ResponseWriter, r *http.Request) {
 // Return a list of discounted steam games in JSON format.
 func handleSteamDiscounts(w http.ResponseWriter, r *http.Request) {
 	games, err := steam.GetDiscounts(db)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	js, err := json.Marshal(games)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(js)
+}
+
+// Return a list of featured steam games in JSON format
+func handleSteamFeatured(w http.ResponseWriter, r *http.Request) {
+	feature := r.FormValue("feature")
+	games, err := steam.GetFeatured(db, feature)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
