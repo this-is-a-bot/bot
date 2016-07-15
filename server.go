@@ -4,29 +4,35 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"github.com/this-is-a-bot/bot/steam"
 	"log"
 	"net/http"
 	"os"
+
+	"github.com/this-is-a-bot/bot/redis"
+	"github.com/this-is-a-bot/bot/steam"
 )
 
-// Global instance of database connection.
-var db *sql.DB
+// Global instance.
+var (
+	db *sql.DB
+	rs redis.RedisStrore
+)
 
-func getDB() (db *sql.DB) {
+func setup() {
 	var err error
 	if os.Getenv("ENV") == "HEROKU" {
 		db, err = sql.Open("postgres", os.Getenv("DATABASE_URL"))
+		rs = redis.NewStore(os.Getenv("REDIS_URL"))
 	} else {
 		// Local dev.
 		db, err = sql.Open("postgres", "dbname=bot sslmode=disable")
+		rs = redis.NewStore("tcp://127.0.0.1:6379")
 	}
 
 	if err != nil {
 		// Fatal error, stop.
 		panic(err)
 	}
-	return
 }
 
 func main() {
@@ -34,8 +40,8 @@ func main() {
 	http.HandleFunc("/steam/discounts", handleSteamDiscounts)
 	http.HandleFunc("/steam/featured", handleSteamFeatured)
 
-	// Init database.
-	db = getDB()
+	// Init database & redis.
+	setup()
 	defer db.Close()
 
 	hostport := fmt.Sprintf(":%s", os.Getenv("PORT"))
