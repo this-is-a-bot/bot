@@ -26,7 +26,7 @@ func setup() {
 	} else {
 		// Local dev.
 		db, err = sql.Open("postgres", "dbname=bot sslmode=disable")
-		rs = redis.NewStore("tcp://127.0.0.1:6379")
+		rs = redis.NewStore("redis://127.0.0.1:6379")
 	}
 
 	if err != nil {
