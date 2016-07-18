@@ -2,6 +2,7 @@ package tracker
 
 import (
 	"database/sql"
+	"errors"
 )
 
 type Catalog struct {
