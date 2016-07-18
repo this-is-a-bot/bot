@@ -10,6 +10,7 @@ import (
 
 	"github.com/this-is-a-bot/bot/redis"
 	"github.com/this-is-a-bot/bot/steam"
+	"github.com/this-is-a-bot/bot/tracker"
 )
 
 // Global instance.
@@ -39,6 +40,7 @@ func main() {
 	http.HandleFunc("/", handleIndex)
 	http.HandleFunc("/steam/discounts", handleSteamDiscounts)
 	http.HandleFunc("/steam/featured", handleSteamFeatured)
+	http.HandleFunc("/tracker/listing/text", handleTrackerListingText)
 
 	// Init database & redis.
 	setup()
@@ -82,6 +84,25 @@ func handleSteamFeatured(w http.ResponseWriter, r *http.Request) {
 	}
 
 	js, err := json.Marshal(games)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(js)
+}
+
+// TODO: Temp endpoint. Return a list of catalogs in JSON.
+func handleTrackerListingText(w http.ResponseWriter, r *http.Request) {
+	username, app := r.FormValue("username"), r.FormValue("app")
+	catalogs, err := tracker.GetTrackingCatalogs(db, username, app)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	js, err := json.Marshal(catalogs)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
