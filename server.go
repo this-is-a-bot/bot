@@ -7,9 +7,11 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 
 	"github.com/this-is-a-bot/bot/redis"
 	"github.com/this-is-a-bot/bot/steam"
+	"github.com/this-is-a-bot/bot/tracker"
 )
 
 // Global instance.
@@ -39,6 +41,7 @@ func main() {
 	http.HandleFunc("/", handleIndex)
 	http.HandleFunc("/steam/discounts", handleSteamDiscounts)
 	http.HandleFunc("/steam/featured", handleSteamFeatured)
+	http.HandleFunc("/tracker/listing/text", handleTrackerListingText)
 
 	// Init database & redis.
 	setup()
@@ -89,4 +92,38 @@ func handleSteamFeatured(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.Write(js)
+}
+
+// Return plain texts of tracking list.
+func handleTrackerListingText(w http.ResponseWriter, r *http.Request) {
+	username, app := r.FormValue("username"), r.FormValue("app")
+	catalogs, err := tracker.GetTrackingCatalogs(db, username, app)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	} else if len(catalogs) == 0 {
+		http.Error(w, "no catalogs for such user", http.StatusNotFound)
+		return
+	}
+
+	res := make([]string, 0)
+	for _, catalog := range catalogs {
+		s := fmt.Sprintf("%d. %s", catalog.ID, catalog.Name)
+		if catalog.Done {
+			if catalog.Value > 0 {
+				s += fmt.Sprintf(": %v", catalog.Value)
+				if catalog.Unit != "" {
+					s += " " + catalog.Unit
+				}
+			} else {
+				s += "done"
+			}
+		} else {
+			s += ": x"
+		}
+		res = append(res, s)
+	}
+
+	w.Header().Set("Content-Type", "text/plain")
+	w.Write([]byte(strings.Join(res, "\n")))
 }
