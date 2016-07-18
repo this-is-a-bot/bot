@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 
 	"github.com/this-is-a-bot/bot/redis"
 	"github.com/this-is-a-bot/bot/steam"
@@ -93,7 +94,7 @@ func handleSteamFeatured(w http.ResponseWriter, r *http.Request) {
 	w.Write(js)
 }
 
-// TODO: Temp endpoint. Return a list of catalogs in JSON.
+// Return plain texts of tracking list.
 func handleTrackerListingText(w http.ResponseWriter, r *http.Request) {
 	username, app := r.FormValue("username"), r.FormValue("app")
 	catalogs, err := tracker.GetTrackingCatalogs(db, username, app)
@@ -102,12 +103,24 @@ func handleTrackerListingText(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	js, err := json.Marshal(catalogs)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
+	res := make([]string, 0)
+	for _, catalog := range catalogs {
+		s := fmt.Sprintf("%d. %s", catalog.ID, catalog.Name)
+		if catalog.Done {
+			if catalog.Value > 0 {
+				s += fmt.Sprintf(": %v", catalog.Value)
+				if catalog.Unit != "" {
+					s += " " + catalog.Unit
+				}
+			} else {
+				s += "done"
+			}
+		} else {
+			s += ": x"
+		}
+		res = append(res, s)
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.Write(js)
+	w.Header().Set("Content-Type", "text/plain")
+	w.Write([]byte(strings.Join(res, "\n")))
 }

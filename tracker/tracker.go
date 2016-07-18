@@ -59,6 +59,7 @@ func GetTrackingCatalogs(db *sql.DB, username string, app string) ([]Catalog, er
 		if latestEventID > 0 {
 			var value float32
 			var markedAt time.Time
+			// TODO: join the table before to avoid this extra SQL query.
 			err = db.QueryRow(queryTrackingEventByID, latestEventID).Scan(&value, &markedAt)
 			if err != nil {
 				return nil, err
