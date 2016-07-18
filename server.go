@@ -101,6 +101,9 @@ func handleTrackerListingText(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
+	} else if len(catalogs) == 0 {
+		http.Error(w, "no catalogs for such user", http.StatusNotFound)
+		return
 	}
 
 	res := make([]string, 0)
