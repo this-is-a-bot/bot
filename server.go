@@ -7,6 +7,8 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/this-is-a-bot/bot/redis"
@@ -42,6 +44,7 @@ func main() {
 	http.HandleFunc("/steam/discounts", handleSteamDiscounts)
 	http.HandleFunc("/steam/featured", handleSteamFeatured)
 	http.HandleFunc("/tracker/listing/text", handleTrackerListingText)
+	http.HandleFunc("/tracker/marking/text", handleTrackerMarkingText)
 
 	// Init database & redis.
 	setup()
@@ -56,6 +59,8 @@ func main() {
 func handleIndex(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintln(w, "Welcome! I am a bot.")
 }
+
+/* Steam. */
 
 // Return a list of discounted steam games in JSON format.
 func handleSteamDiscounts(w http.ResponseWriter, r *http.Request) {
@@ -94,9 +99,32 @@ func handleSteamFeatured(w http.ResponseWriter, r *http.Request) {
 	w.Write(js)
 }
 
+/* Tracker. */
+
+type ByID []tracker.Catalog
+
+func (a ByID) Len() int           { return len(a) }
+func (a ByID) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
+func (a ByID) Less(i, j int) bool { return a[i].ID < a[j].ID }
+
 // Return plain texts of tracking list.
 func handleTrackerListingText(w http.ResponseWriter, r *http.Request) {
 	username, app := r.FormValue("username"), r.FormValue("app")
+	switch r.Method {
+	case "POST":
+		// POST method for adding new tracking.
+		name, unit := r.PostFormValue("name"), r.PostFormValue("unit")
+		if name == "" {
+			http.Error(w, "'name' field is required", http.StatusBadRequest)
+			return
+		}
+		_, err := tracker.AddTracking(db, username, app, name, unit)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+	}
+
 	catalogs, err := tracker.GetTrackingCatalogs(db, username, app)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -106,6 +134,7 @@ func handleTrackerListingText(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	sort.Sort(ByID(catalogs))
 	res := make([]string, 0)
 	for _, catalog := range catalogs {
 		s := fmt.Sprintf("%d. %s", catalog.ID, catalog.Name)
@@ -116,7 +145,7 @@ func handleTrackerListingText(w http.ResponseWriter, r *http.Request) {
 					s += " " + catalog.Unit
 				}
 			} else {
-				s += "done"
+				s += ": done"
 			}
 		} else {
 			s += ": x"
@@ -126,4 +155,45 @@ func handleTrackerListingText(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "text/plain")
 	w.Write([]byte(strings.Join(res, "\n")))
+}
+
+// Mark event done, then return plain texts of tracking list.
+func handleTrackerMarkingText(w http.ResponseWriter, r *http.Request) {
+	// Only allow POST.
+	if r.Method != "POST" {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	err := r.ParseForm()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	catalogIDText, valueText := r.PostFormValue("catalogID"), r.PostFormValue("value")
+	catalogID, err := strconv.Atoi(catalogIDText)
+	if err != nil {
+		http.Error(w, "'catalogID' must be an integer: "+err.Error(),
+			http.StatusBadRequest)
+		return
+	}
+
+	var value float64 = 0
+	if valueText != "" {
+		value, err = strconv.ParseFloat(valueText, 64)
+		if err != nil {
+			http.Error(w, "'value' must be a float", http.StatusBadRequest)
+			return
+		}
+	}
+
+	err = tracker.MarkDone(db, catalogID, value)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// FIXME: A hack to reuse the code by changing the method to GET to avoid creating tracking.
+	r.Method = "GET"
+	handleTrackerListingText(w, r)
 }
