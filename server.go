@@ -164,17 +164,11 @@ func handleTrackerMarkingText(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
-	err := r.ParseForm()
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
 
 	catalogIDText, valueText := r.PostFormValue("catalogID"), r.PostFormValue("value")
 	catalogID, err := strconv.Atoi(catalogIDText)
 	if err != nil {
-		http.Error(w, "'catalogID' must be an integer: "+err.Error(),
-			http.StatusBadRequest)
+		http.Error(w, "'catalogID' must be an integer", http.StatusBadRequest)
 		return
 	}
 
