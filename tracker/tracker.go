@@ -12,8 +12,11 @@ const trackerCatalogTableName = "tracker_catalog"
 const trackerEventTableName = "tracker_events"
 
 var (
-	queryTrackingListByUser string
-	queryTrackingEventByID  string
+	queryTrackingListByUser              string
+	queryTrackingEventByID               string
+	insertTrackingCatalog                string
+	updateTrackingCatalogWithLatestEvent string
+	insertTrackingEvent                  string
 )
 
 // Prepare queries.
@@ -25,8 +28,19 @@ func init() {
 		"SELECT %s FROM %s WHERE disabled IS FALSE AND username = $1 AND app = $2",
 		strings.Join(fields, ","), trackerCatalogTableName)
 
+	insertTrackingCatalog = fmt.Sprintf(
+		"INSERT INTO %s (USERNAME, APP, NAME, UNIT) VALUES ($1, $2, $3, $4) RETURNING id",
+		trackerCatalogTableName)
+
+	updateTrackingCatalogWithLatestEvent = fmt.Sprintf(
+		"UPDATE %s SET latest_event = $1 WHERE id = $2", trackerCatalogTableName)
+
 	queryTrackingEventByID = fmt.Sprintf(
 		"SELECT value, marked_at FROM %s WHERE id = $1", trackerEventTableName)
+
+	insertTrackingEvent = fmt.Sprintf(
+		"INSERT INTO %s (catalog_id, value) VALUES ($1, $2) RETURNING id",
+		trackerEventTableName)
 }
 
 type Catalog struct {
@@ -48,7 +62,7 @@ func GetTrackingCatalogs(db *sql.DB, username string, app string) ([]Catalog, er
 	res := make([]Catalog, 0)
 	for rows.Next() {
 		var catalog Catalog
-		var latestEventID int
+		var latestEventID sql.NullInt64
 
 		err = rows.Scan(&catalog.ID, &catalog.Name, &catalog.Unit, &latestEventID)
 		if err != nil {
@@ -56,11 +70,12 @@ func GetTrackingCatalogs(db *sql.DB, username string, app string) ([]Catalog, er
 		}
 
 		// Fetch latest event to see whether this catalog has been completed.
-		if latestEventID > 0 {
+		if latestEventID.Valid {
 			var value float32
 			var markedAt time.Time
 			// TODO: join the table before to avoid this extra SQL query.
-			err = db.QueryRow(queryTrackingEventByID, latestEventID).Scan(&value, &markedAt)
+			err = db.QueryRow(
+				queryTrackingEventByID, latestEventID.Int64).Scan(&value, &markedAt)
 			if err != nil {
 				return nil, err
 			}
@@ -81,23 +96,34 @@ func GetTrackingCatalogs(db *sql.DB, username string, app string) ([]Catalog, er
 }
 
 // Mark done for a given catalog (add an event to the catalog with timestamp).
-func MarkDone(db *sql.DB, catalogID int, value float32) error {
-	// TODO:
-	// 1. Insert into `tracker_events` table.
-	// 2. Update `tracker_catalog` table to let the corresponding catalog point to
-	//    latest event.
-	return errors.New("not implemented")
+func MarkDone(db *sql.DB, catalogID int, value float64) error {
+	var eventID int64
+	err := db.QueryRow(insertTrackingEvent, catalogID, value).Scan(&eventID)
+	if err != nil {
+		return err
+	}
+
+	_, err = db.Exec(updateTrackingCatalogWithLatestEvent, eventID, catalogID)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // Add a tracking item for the particular user.
-func AddTracking(db *sql.DB, username string, app string, name string, unit string) (int, error) {
-	// TODO: Insert into `tracker_catalog` and return the ID.
-	return 0, errors.New("not implemented")
+func AddTracking(db *sql.DB, username string, app string, name string, unit string) (int64, error) {
+	var id int64
+	err := db.QueryRow(insertTrackingCatalog, username, app, name, unit).Scan(&id)
+	if err != nil {
+		return 0, err
+	}
+
+	return id, nil
 }
 
 // Modify the tracking catalog with new name / unit.
 func UpdateTracking(db *sql.DB, catalogID int, newName string, newUnit string) (int, error) {
-	// TODO: Update `tracker_catalog` with new name / unit if not empty.
 	return 0, errors.New("not implemented")
 }
 
