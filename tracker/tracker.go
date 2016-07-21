@@ -6,10 +6,17 @@ import (
 	"fmt"
 	"strings"
 	"time"
+
+	"github.com/this-is-a-bot/bot/redis"
 )
 
 const trackerCatalogTableName = "tracker_catalog"
 const trackerEventTableName = "tracker_events"
+const (
+	nothing  = iota
+	creating = iota
+	listing  = iota
+)
 
 var (
 	queryTrackingListByUser              string
@@ -130,4 +137,39 @@ func UpdateTracking(db *sql.DB, catalogID int, newName string, newUnit string) (
 // Delete the tracking item.
 func RemoveTracking(db *sql.DB, catalogID int) error {
 	return errors.New("not implemented")
+}
+
+// Helper function to set user state. Note TTL is set to 5 min.
+func setUserState(rs redis.RedisStore, username string, app string, state int) error {
+	const ttl = 300 // 5 min.
+	c := rs.GetConnection()
+	defer c.Close()
+
+	k := fmt.Sprintf("bot:user-state:%s:%s", app, username)
+	var err error
+
+	switch state {
+	case creating:
+		_, err = c.Do("SETEX", k, ttl, "tracker:creating")
+	case listing:
+		_, err = c.Do("SETEX", k, ttl, "tracker:listing")
+	case nothing:
+		_, err = c.Do("DEL", k)
+	}
+	return err
+}
+
+// Set user state as 'listing'.
+func SetUserStateAsListing(rs redis.RedisStore, username, app string) error {
+	return setUserState(rs, username, app, listing)
+}
+
+// Set user state as 'creating'.
+func SetUserStateAsCreating(rs redis.RedisStore, username, app string) error {
+	return setUserState(rs, username, app, creating)
+}
+
+// Clear user state.
+func ClearUserState(rs redis.RedisStore, username, app string) error {
+	return setUserState(rs, username, app, nothing)
 }
