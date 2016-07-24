@@ -24,6 +24,9 @@ var (
 	insertTrackingCatalog                string
 	updateTrackingCatalogWithLatestEvent string
 	insertTrackingEvent                  string
+
+	// TODO: Hardcoded timezone for now (Pacific time).
+	pacific *time.Location
 )
 
 // Prepare queries.
@@ -48,6 +51,13 @@ func init() {
 	insertTrackingEvent = fmt.Sprintf(
 		"INSERT INTO %s (catalog_id, value) VALUES ($1, $2) RETURNING id",
 		trackerEventTableName)
+
+	// Load timezone as Pacific time.
+	var err error
+	pacific, err = time.LoadLocation("US/Pacific")
+	if err != nil {
+		panic(err)
+	}
 }
 
 type Catalog struct {
@@ -87,7 +97,9 @@ func GetTrackingCatalogs(db *sql.DB, username string, app string) ([]Catalog, er
 				return nil, err
 			}
 
-			now := time.Now()
+			// Convert to pacific time.
+			now := time.Now().In(pacific)
+			markedAt = markedAt.In(pacific)
 			y1, m1, d1 := now.Date()
 			y2, m2, d2 := markedAt.Date()
 			if y1 == y2 && m1 == m2 && d1 == d2 {
