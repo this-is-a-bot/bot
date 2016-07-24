@@ -19,7 +19,7 @@ import (
 // Global instance.
 var (
 	db *sql.DB
-	rs redis.RedisStore
+	rs redis.RedisStrore
 )
 
 func setup() {
@@ -123,8 +123,6 @@ func handleTrackerListingText(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		// Creating succeeds! Clear user state.
-		tracker.ClearUserState(rs, username, app)
 	}
 
 	catalogs, err := tracker.GetTrackingCatalogs(db, username, app)
@@ -133,8 +131,6 @@ func handleTrackerListingText(w http.ResponseWriter, r *http.Request) {
 		return
 	} else if len(catalogs) == 0 {
 		http.Error(w, "no catalogs for such user", http.StatusNotFound)
-		// Set user status to be creating.
-		tracker.SetUserStateAsCreating(rs, username, app)
 		return
 	}
 
@@ -159,8 +155,6 @@ func handleTrackerListingText(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "text/plain")
 	w.Write([]byte(strings.Join(res, "\n")))
-	// Set user state as listing.
-	tracker.SetUserStateAsListing(rs, username, app)
 }
 
 // Mark event done, then return plain texts of tracking list.
