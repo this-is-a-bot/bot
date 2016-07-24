@@ -6,7 +6,7 @@ import (
 	redigo "github.com/garyburd/redigo/redis"
 )
 
-// RedisStrore is the interface for underlying Redis persistence store.
+// RedisStore is the interface for underlying Redis persistence store.
 type RedisStore interface {
 	GetConnection() redigo.Conn
 }
