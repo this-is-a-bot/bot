@@ -19,7 +19,7 @@ import (
 // Global instance.
 var (
 	db *sql.DB
-	rs redis.RedisStrore
+	rs redis.RedisStore
 )
 
 func setup() {
